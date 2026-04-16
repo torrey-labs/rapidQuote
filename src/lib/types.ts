@@ -1,34 +1,53 @@
-export type ToolKind = "pathway" | "roofline" | "accent" | "eraser";
+export type StickerKind = "downlight" | "uplight" | "pathlight";
+
+export type ToolKind =
+  | "deck"
+  | "permanent"
+  | StickerKind
+  | "eraser";
 
 export type LineStroke = {
   id: string;
-  tool: "pathway" | "roofline";
+  tool: "deck" | "permanent";
   color: string;
   width: number;
   points: [number, number][];
 };
 
-export type AccentMark = {
+export type StickerMark = {
   id: string;
-  tool: "accent";
-  color: string;
+  tool: StickerKind;
   position: [number, number];
   size: number;
 };
 
-export type Stroke = LineStroke | AccentMark;
+export type Stroke = LineStroke | StickerMark;
 
 export type StrokeCounts = {
-  pathway: number;
-  roofline: number;
-  accent: number;
+  deck: number;
+  permanent: number;
+  downlight: number;
+  uplight: number;
+  pathlight: number;
 };
 
 export const emptyStrokeCounts = (): StrokeCounts => ({
-  pathway: 0,
-  roofline: 0,
-  accent: 0,
+  deck: 0,
+  permanent: 0,
+  downlight: 0,
+  uplight: 0,
+  pathlight: 0,
 });
+
+export const STICKER_KINDS: readonly StickerKind[] = [
+  "downlight",
+  "uplight",
+  "pathlight",
+];
+
+export function isStickerKind(tool: ToolKind): tool is StickerKind {
+  return tool === "downlight" || tool === "uplight" || tool === "pathlight";
+}
 
 export type GenerationStatus =
   | "pending"

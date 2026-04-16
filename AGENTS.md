@@ -128,21 +128,28 @@ Run steps 2–6 inside `after()` so the POST returns `{ generationId }` immediat
 
 ## Annotation tool semantics
 
-The installer picks **labeled** tools from a toolbar. Each tool has a fixed color for visual encoding, but installers never memorize colors.
+> **Branch note:** `experiment/sticker-annotations` replaces the three-tool set below with a five-tool set (two lines + three fixture stickers). Merge back to `main` only after comparing Gemini results across several real photos. The table below describes the current **experimental** tool set.
 
-| Tool | Color | Shape | Meaning in prompt fusion |
+The installer picks **labeled** tools from a toolbar. Lines encode lighting *styles* (continuous runs); stickers encode *fixture types* at discrete spots.
+
+| Tool | Kind | Color / asset | Meaning in prompt fusion |
 |---|---|---|---|
-| Pathway | `#3b82f6` | Line, 6px | Warm LED path lights along walkways / garden edges |
-| Roofline | `#f59e0b` | Line, 6px | Permanent architectural rooflines on house edges |
-| Accent | `#ef4444` | X icon | Spot / uplights on trees, pillars, features |
-| Eraser | — | Radius remove | (not passed to fusion) |
+| Deck | Line, 2–20px | `#3b82f6` (blue) | LED strip along deck edges + railings |
+| Permanent | Line, 2–20px | `#f59e0b` (amber) | Permanent architectural roofline / eave lighting |
+| Downlight | Sticker, 5–25% image width | `/stickers/downlight.png` | Eave/ceiling downlight fixture at that spot |
+| Uplight | Sticker, 5–25% image width | `/stickers/uplight.png` | Ground uplight on tree/pillar at that spot |
+| Pathlight | Sticker, 5–25% image width | `/stickers/pathlight.png` | Walkway-height path fixture at that spot |
+| Eraser | Radius remove | — | (not passed to fusion) |
 
-**Adding or changing tools requires updating BOTH:**
+**Adding or changing tools requires updating ALL of:**
 
-- `src/components/Toolbar.tsx` (UI) — Phase 2
-- `src/lib/prompts/master-prompt.ts` (prompt semantics) — Phase 3
+- `src/lib/types.ts` (ToolKind, Stroke union, StrokeCounts) — source of truth
+- `src/components/Toolbar.tsx` (UI buttons + legend)
+- `src/components/AnnotationCanvas.tsx` (placement + render logic)
+- `src/lib/prompts/master-prompt.ts` (semantics in fused prompt)
+- `src/app/api/generate/route.ts` AND `src/app/api/regenerate/[sessionId]/route.ts` (`countStrokes`)
 
-If the two fall out of sync, Claude will describe tools the canvas doesn't have (or vice versa) and generations will degrade silently.
+If the five fall out of sync, Claude will describe tools the canvas doesn't have (or vice versa) and generations will degrade silently.
 
 ---
 

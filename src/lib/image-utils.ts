@@ -46,9 +46,18 @@ export function getSvgPathFromStroke(points: number[][]): string {
   return `${d} Z`;
 }
 
+export type StickerDraw = {
+  image: HTMLImageElement;
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+};
+
 export async function flattenCanvasToBlob(
   bgImage: HTMLImageElement,
   svgElement: SVGSVGElement,
+  stickerDraws: StickerDraw[] = [],
   maxEdge = 1536,
   quality = 0.82,
 ): Promise<Blob> {
@@ -62,6 +71,7 @@ export async function flattenCanvasToBlob(
     w = Math.round(natW * ratio);
     h = Math.round(natH * ratio);
   }
+  const scale = w / natW;
 
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -70,10 +80,13 @@ export async function flattenCanvasToBlob(
 
   ctx.drawImage(bgImage, 0, 0, w, h);
 
+  // Pass 1: lines (SVG clone sans sticker <image> tags)
   const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
   svgClone.setAttribute("width", String(w));
   svgClone.setAttribute("height", String(h));
-  svgClone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svgClone.setAttribute("viewBox", `0 0 ${natW} ${natH}`);
+  // Strip any <image> nodes — stickers are drawn separately below
+  svgClone.querySelectorAll("image").forEach((node) => node.remove());
 
   const svgData = new XMLSerializer().serializeToString(svgClone);
   const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
@@ -84,6 +97,15 @@ export async function flattenCanvasToBlob(
     ctx.drawImage(svgImg, 0, 0, w, h);
   } finally {
     URL.revokeObjectURL(url);
+  }
+
+  // Pass 2: stickers as direct canvas draws (avoids SVG/external-image issues)
+  for (const s of stickerDraws) {
+    const dw = s.w * scale;
+    const dh = s.h * scale;
+    const dx = s.cx * scale - dw / 2;
+    const dy = s.cy * scale - dh / 2;
+    ctx.drawImage(s.image, dx, dy, dw, dh);
   }
 
   return new Promise<Blob>((resolve, reject) => {

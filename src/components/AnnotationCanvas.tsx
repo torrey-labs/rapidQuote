@@ -3,18 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import getStroke from "perfect-freehand";
-import { getSvgPathFromStroke, flattenCanvasToBlob } from "@/lib/image-utils";
-import type { ToolKind, Stroke, LineStroke, AccentMark } from "@/lib/types";
+import {
+  getSvgPathFromStroke,
+  flattenCanvasToBlob,
+  type StickerDraw,
+} from "@/lib/image-utils";
+import type {
+  ToolKind,
+  Stroke,
+  LineStroke,
+  StickerMark,
+  StickerKind,
+} from "@/lib/types";
+import { STICKER_KINDS, isStickerKind } from "@/lib/types";
 import Toolbar from "./Toolbar";
 import NotesPanel from "./NotesPanel";
 
-const TOOL_COLORS: Record<string, string> = {
-  pathway: "#3b82f6",
-  roofline: "#f59e0b",
-  accent: "#ef4444",
+const TOOL_COLORS: Record<"deck" | "permanent", string> = {
+  deck: "#3b82f6",
+  permanent: "#f59e0b",
 };
 
 const DEFAULT_STROKE_SIZE = 8;
+const DEFAULT_STICKER_SIZE = 10; // percent of image width
 
 type Props = {
   sessionId: string;
@@ -32,9 +43,19 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
   const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
   const [imgRendered, setImgRendered] = useState({ w: 0, h: 0, x: 0, y: 0 });
 
-  const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
+  // Filter out any unknown-tool strokes from old sessions (back-compat drop)
+  const sanitizedInitial = (initialStrokes ?? []).filter(
+    (s) =>
+      s.tool === "deck" ||
+      s.tool === "permanent" ||
+      s.tool === "downlight" ||
+      s.tool === "uplight" ||
+      s.tool === "pathlight",
+  );
+
+  const [strokes, setStrokes] = useState<Stroke[]>(sanitizedInitial);
   const [redoHistory, setRedoHistory] = useState<Stroke[][]>([]);
-  const [activeTool, setActiveTool] = useState<ToolKind>("pathway");
+  const [activeTool, setActiveTool] = useState<ToolKind>("deck");
   const [strokeSize, setStrokeSize] = useState(DEFAULT_STROKE_SIZE);
   const [currentPoints, setCurrentPoints] = useState<[number, number][]>([]);
   const isDrawing = useRef(false);
@@ -46,6 +67,45 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
   const [hintDismissed, setHintDismissed] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+
+  // Preload sticker images so we can flatten cleanly and know their aspect ratios
+  const stickerImages = useRef<Record<StickerKind, HTMLImageElement | null>>({
+    downlight: null,
+    uplight: null,
+    pathlight: null,
+  });
+  const [stickersReady, setStickersReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loads = STICKER_KINDS.map(
+      (kind) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            stickerImages.current[kind] = img;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = `/stickers/${kind}.png`;
+        }),
+    );
+    Promise.all(loads).then(() => {
+      if (!cancelled) setStickersReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // When switching into a sticker tool, adopt the sticker default size
+  useEffect(() => {
+    if (isStickerKind(activeTool)) {
+      setStrokeSize((prev) => (prev < 5 || prev > 25 ? DEFAULT_STICKER_SIZE : prev));
+    } else if (activeTool === "deck" || activeTool === "permanent") {
+      setStrokeSize((prev) => (prev < 2 || prev > 20 ? DEFAULT_STROKE_SIZE : prev));
+    }
+  }, [activeTool]);
 
   // Compute the actual rendered position/size of the image within its container
   const updateRenderedRect = useCallback(() => {
@@ -122,21 +182,36 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
     });
   }, []);
 
-  const eraseAt = useCallback((pt: [number, number]) => {
-    const radius = 0.035;
-    setStrokes((prev) => {
-      const next = prev.filter((s) => {
-        if (s.tool === "accent") {
-          return Math.hypot(s.position[0] - pt[0], s.position[1] - pt[1]) > radius;
-        }
-        return !(s as LineStroke).points.some((p) =>
-          Math.hypot(p[0] - pt[0], p[1] - pt[1]) < radius,
-        );
-      });
-      if (next.length < prev.length) setRedoHistory([]);
-      return next;
-    });
+  const stickerAspect = useCallback((kind: StickerKind): number => {
+    const img = stickerImages.current[kind];
+    if (!img || img.naturalWidth === 0) return 1;
+    return img.naturalHeight / img.naturalWidth;
   }, []);
+
+  const eraseAt = useCallback(
+    (pt: [number, number]) => {
+      const radius = 0.035;
+      setStrokes((prev) => {
+        const next = prev.filter((s) => {
+          if (isStickerKind(s.tool)) {
+            const sm = s as StickerMark;
+            const hw = sm.size / 100 / 2;
+            const aspect = stickerAspect(sm.tool);
+            const natAspect = imgNatural.w > 0 ? imgNatural.h / imgNatural.w : 1;
+            const hh = hw * aspect / natAspect;
+            const r = Math.max(hw, hh);
+            return Math.hypot(sm.position[0] - pt[0], sm.position[1] - pt[1]) > r;
+          }
+          return !(s as LineStroke).points.some((p) =>
+            Math.hypot(p[0] - pt[0], p[1] - pt[1]) < radius,
+          );
+        });
+        if (next.length < prev.length) setRedoHistory([]);
+        return next;
+      });
+    },
+    [imgNatural, stickerAspect],
+  );
 
   // --- Pointer handlers ---
   const strokeSizeRef = useRef(strokeSize);
@@ -149,12 +224,12 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
       e.preventDefault();
       (e.target as Element).setPointerCapture?.(e.pointerId);
       const pt = toRatio(e.clientX, e.clientY);
+      const tool = activeToolRef.current;
 
-      if (activeToolRef.current === "accent") {
-        const mark: AccentMark = {
+      if (isStickerKind(tool)) {
+        const mark: StickerMark = {
           id: crypto.randomUUID(),
-          tool: "accent",
-          color: TOOL_COLORS.accent,
+          tool,
           position: pt,
           size: strokeSizeRef.current,
         };
@@ -163,7 +238,7 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
         return;
       }
 
-      if (activeToolRef.current === "eraser") {
+      if (tool === "eraser") {
         eraseAt(pt);
         isDrawing.current = true;
         return;
@@ -196,13 +271,15 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
     isDrawing.current = false;
 
     if (activeToolRef.current === "eraser") return;
+    const tool = activeToolRef.current;
+    if (tool !== "deck" && tool !== "permanent") return;
 
     setCurrentPoints((pts) => {
       if (pts.length < 2) return [];
       const stroke: LineStroke = {
         id: crypto.randomUUID(),
-        tool: activeToolRef.current as "pathway" | "roofline",
-        color: TOOL_COLORS[activeToolRef.current],
+        tool,
+        color: TOOL_COLORS[tool],
         width: strokeSizeRef.current,
         points: pts,
       };
@@ -224,24 +301,28 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
     return <path key={s.id} d={getSvgPathFromStroke(outline)} fill={s.color} opacity={0.8} />;
   }
 
-  function renderAccentMark(s: AccentMark) {
+  function renderStickerMark(s: StickerMark) {
+    const width = (s.size / 100) * imgNatural.w;
+    const aspect = stickerAspect(s.tool);
+    const height = width * aspect;
     const cx = s.position[0] * imgNatural.w;
     const cy = s.position[1] * imgNatural.h;
-    const halfSize = imgNatural.w * 0.015;
-    const sw = Math.max(2, s.size * 0.4);
     return (
-      <g key={s.id}>
-        <line x1={cx - halfSize} y1={cy - halfSize} x2={cx + halfSize} y2={cy + halfSize}
-          stroke={s.color} strokeWidth={sw} strokeLinecap="round" />
-        <line x1={cx + halfSize} y1={cy - halfSize} x2={cx - halfSize} y2={cy + halfSize}
-          stroke={s.color} strokeWidth={sw} strokeLinecap="round" />
-      </g>
+      <image
+        key={s.id}
+        href={`/stickers/${s.tool}.png`}
+        x={cx - width / 2}
+        y={cy - height / 2}
+        width={width}
+        height={height}
+        preserveAspectRatio="xMidYMid meet"
+      />
     );
   }
 
   function renderCurrentStroke() {
-    if (currentPoints.length < 2 || activeTool === "accent" || activeTool === "eraser")
-      return null;
+    if (currentPoints.length < 2) return null;
+    if (activeTool !== "deck" && activeTool !== "permanent") return null;
     const px = currentPoints.map(([rx, ry]) => [rx * imgNatural.w, ry * imgNatural.h]);
     const outline = getStroke(px, {
       size: strokeSize,
@@ -249,21 +330,49 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
       smoothing: 0.5,
       streamline: 0.5,
     });
-    return <path d={getSvgPathFromStroke(outline)} fill={TOOL_COLORS[activeTool]} opacity={0.6} />;
+    return (
+      <path
+        d={getSvgPathFromStroke(outline)}
+        fill={TOOL_COLORS[activeTool]}
+        opacity={0.6}
+      />
+    );
   }
 
   // --- Generate ---
   async function handleGenerate() {
     if (!imgRef.current || !svgRef.current) return;
+    if (!stickersReady) {
+      setGenerateError("Sticker assets still loading — try again in a moment.");
+      return;
+    }
     setGenerating(true);
     try {
-      const blob = await flattenCanvasToBlob(imgRef.current, svgRef.current);
+      const stickerDraws: StickerDraw[] = [];
+      for (const s of strokes) {
+        if (!isStickerKind(s.tool)) continue;
+        const sm = s as StickerMark;
+        const img = stickerImages.current[sm.tool];
+        if (!img) continue;
+        const w = (sm.size / 100) * imgNatural.w;
+        const h = w * (img.naturalHeight / img.naturalWidth);
+        stickerDraws.push({
+          image: img,
+          cx: sm.position[0] * imgNatural.w,
+          cy: sm.position[1] * imgNatural.h,
+          w,
+          h,
+        });
+      }
+
+      const blob = await flattenCanvasToBlob(imgRef.current, svgRef.current, stickerDraws);
       const strokesJson = JSON.stringify(strokes);
       console.log("[generate] payload sizes", {
         annotatedBlobKB: Math.round(blob.size / 1024),
         blobType: blob.type,
         strokesJsonKB: Math.round(strokesJson.length / 1024),
         notesBytes: notes.length,
+        stickerCount: stickerDraws.length,
       });
 
       if (blob.size > 4 * 1024 * 1024) {
@@ -352,8 +461,8 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
             onPointerCancel={handlePointerUp}
           >
             {strokes.map((s) =>
-              s.tool === "accent"
-                ? renderAccentMark(s)
+              isStickerKind(s.tool)
+                ? renderStickerMark(s as StickerMark)
                 : renderLineStroke(s as LineStroke),
             )}
             {renderCurrentStroke()}

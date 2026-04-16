@@ -1,11 +1,23 @@
 "use client";
 
 import type { ToolKind } from "@/lib/types";
+import { isStickerKind } from "@/lib/types";
 
-const TOOLS: { kind: ToolKind; label: string; desc: string; color: string; icon?: string; iconSrc?: string }[] = [
-  { kind: "pathway", label: "Pathway", desc: "Path lights along walkways", color: "#3b82f6", icon: "〰️" },
-  { kind: "roofline", label: "Roofline", desc: "Lights along roof edges", color: "#f59e0b", icon: "⌇" },
-  { kind: "accent", label: "Accent", desc: "Spot lights on trees/pillars", color: "#ef4444", icon: "✕" },
+type ToolDef = {
+  kind: ToolKind;
+  label: string;
+  desc: string;
+  color: string;
+  icon?: string;
+  iconSrc?: string;
+};
+
+const TOOLS: ToolDef[] = [
+  { kind: "deck", label: "Deck", desc: "LED strip along deck edges + railings", color: "#3b82f6", icon: "〰️" },
+  { kind: "permanent", label: "Permanent", desc: "Roofline / eaves architectural lighting", color: "#f59e0b", icon: "⌇" },
+  { kind: "downlight", label: "Downlight", desc: "Eave/ceiling downlight fixture", color: "#cbd5e1", iconSrc: "/stickers/downlight.png" },
+  { kind: "uplight", label: "Uplight", desc: "Ground uplight on tree/pillar", color: "#cbd5e1", iconSrc: "/stickers/uplight.png" },
+  { kind: "pathlight", label: "Pathlight", desc: "Walkway path fixture", color: "#cbd5e1", iconSrc: "/stickers/pathlight.png" },
   { kind: "eraser", label: "Eraser", desc: "Remove strokes", color: "#9ca3af", iconSrc: "/icons/eraser.png" },
 ];
 
@@ -48,9 +60,10 @@ export default function Toolbar({
   legendOpen,
   onToggleLegend,
 }: ToolbarProps) {
-  const sizeLabel = activeTool === "accent" ? "Mark size" : "Line width";
-  const sizeMin = activeTool === "accent" ? 8 : 2;
-  const sizeMax = activeTool === "accent" ? 30 : 20;
+  const sticker = isStickerKind(activeTool);
+  const sizeLabel = sticker ? "Sticker size" : "Line width";
+  const sizeMin = sticker ? 5 : 2;
+  const sizeMax = sticker ? 25 : 20;
 
   if (collapsed) {
     return (
@@ -71,11 +84,16 @@ export default function Toolbar({
     <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
       {/* Legend */}
       {legendOpen && (
-        <div className="mb-1 w-72 rounded-xl bg-charcoal/90 px-4 py-3 text-xs text-cream/80 shadow-2xl backdrop-blur-md">
+        <div className="mb-1 w-80 rounded-xl bg-charcoal/90 px-4 py-3 text-xs text-cream/80 shadow-2xl backdrop-blur-md">
           <p className="mb-2 font-medium text-cream">Tool guide</p>
           {TOOLS.filter((t) => t.kind !== "eraser").map((t) => (
             <div key={t.kind} className="mb-1 flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: t.color }} />
+              {t.iconSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={t.iconSrc} alt="" className="h-4 w-4 shrink-0 object-contain" />
+              ) : (
+                <span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ backgroundColor: t.color }} />
+              )}
               <span className="font-medium">{t.label}</span>
               <span className="text-cream/50">— {t.desc}</span>
             </div>
@@ -102,7 +120,6 @@ export default function Toolbar({
 
       {/* Main toolbar */}
       <div className="flex items-center gap-1 rounded-2xl bg-charcoal/90 px-2 py-2 shadow-2xl backdrop-blur-md">
-        {/* Back button */}
         <button
           type="button"
           onClick={onBack}
@@ -114,39 +131,46 @@ export default function Toolbar({
 
         <div className="mx-0.5 h-6 w-px bg-cream/20" />
 
-        {/* Tool buttons */}
-        {TOOLS.map((t) => (
-          <button
-            key={t.kind}
-            type="button"
-            onClick={() => onToolChange(t.kind)}
-            className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
-              activeTool === t.kind
-                ? "ring-2 ring-offset-1 ring-offset-charcoal"
-                : "opacity-60 hover:opacity-90"
-            }`}
-            style={
-              activeTool === t.kind
-                ? { backgroundColor: t.color + "33", "--tw-ring-color": t.color } as React.CSSProperties
-                : undefined
-            }
-            title={t.label}
-          >
-            {t.iconSrc ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={t.iconSrc}
-                alt={t.label}
-                className="h-5 w-5"
-                style={{ filter: "invert(1)", opacity: activeTool === t.kind ? 1 : 0.7 }}
-              />
-            ) : (
-              <span className="text-xl leading-none" style={{ color: t.color }}>
-                {t.icon}
-              </span>
-            )}
-          </button>
-        ))}
+        {TOOLS.map((t) => {
+          const isSticker = isStickerKind(t.kind);
+          const isEraser = t.kind === "eraser";
+          return (
+            <button
+              key={t.kind}
+              type="button"
+              onClick={() => onToolChange(t.kind)}
+              className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
+                activeTool === t.kind
+                  ? "ring-2 ring-offset-1 ring-offset-charcoal"
+                  : "opacity-60 hover:opacity-90"
+              }`}
+              style={
+                activeTool === t.kind
+                  ? ({ backgroundColor: t.color + "33", "--tw-ring-color": t.color } as React.CSSProperties)
+                  : undefined
+              }
+              title={t.label}
+            >
+              {t.iconSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={t.iconSrc}
+                  alt={t.label}
+                  className="h-6 w-6 object-contain"
+                  style={
+                    isEraser
+                      ? { filter: "invert(1)", opacity: activeTool === t.kind ? 1 : 0.7 }
+                      : { opacity: activeTool === t.kind ? 1 : 0.75 }
+                  }
+                />
+              ) : (
+                <span className={`${isSticker ? "text-xs" : "text-xl"} leading-none`} style={{ color: t.color }}>
+                  {t.icon}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
         <div className="mx-0.5 h-6 w-px bg-cream/20" />
 

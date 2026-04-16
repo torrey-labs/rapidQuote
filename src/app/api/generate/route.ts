@@ -7,11 +7,19 @@ import { after } from "next/server";
 import type { Stroke, StrokeCounts } from "@/lib/types";
 
 function countStrokes(strokes: Stroke[]): StrokeCounts {
-  const counts: StrokeCounts = { pathway: 0, roofline: 0, accent: 0 };
+  const counts: StrokeCounts = {
+    deck: 0,
+    permanent: 0,
+    downlight: 0,
+    uplight: 0,
+    pathlight: 0,
+  };
   for (const s of strokes) {
-    if (s.tool === "pathway") counts.pathway++;
-    else if (s.tool === "roofline") counts.roofline++;
-    else if (s.tool === "accent") counts.accent++;
+    if (s.tool === "deck") counts.deck++;
+    else if (s.tool === "permanent") counts.permanent++;
+    else if (s.tool === "downlight") counts.downlight++;
+    else if (s.tool === "uplight") counts.uplight++;
+    else if (s.tool === "pathlight") counts.pathlight++;
   }
   return counts;
 }
