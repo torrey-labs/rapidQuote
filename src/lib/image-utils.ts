@@ -78,7 +78,8 @@ export async function flattenCanvasToBlob(
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-      "image/png",
+      "image/jpeg",
+      0.9,
     );
   });
 }

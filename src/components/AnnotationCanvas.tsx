@@ -259,7 +259,7 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
     try {
       const blob = await flattenCanvasToBlob(imgRef.current, svgRef.current);
       const form = new FormData();
-      form.append("annotatedImage", blob, "annotated.png");
+      form.append("annotatedImage", blob, "annotated.jpg");
       form.append("sessionId", sessionId);
       form.append("strokes", JSON.stringify(strokes));
       if (notes.trim()) form.append("notes", notes.trim());

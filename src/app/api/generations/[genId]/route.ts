@@ -17,9 +17,13 @@ export async function DELETE(
     return Response.json({ error: "Generation not found" }, { status: 404 });
   }
 
-  const path = `${gen.session_id}/${genId}.png`;
-  await supabase.storage.from("annotated").remove([path]);
-  await supabase.storage.from("results").remove([path]);
+  const sessionId = gen.session_id;
+  await supabase.storage
+    .from("annotated")
+    .remove([`${sessionId}/${genId}.jpg`, `${sessionId}/${genId}.png`]);
+  await supabase.storage
+    .from("results")
+    .remove([`${sessionId}/${genId}.png`]);
 
   const { error } = await supabase
     .from("generations")

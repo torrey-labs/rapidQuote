@@ -7,12 +7,22 @@ export class GeminiRefusalError extends Error {
   }
 }
 
+function sniffImageMimeType(buf: Buffer): "image/jpeg" | "image/png" {
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return "image/png";
+  }
+  // Default to JPEG (FF D8 FF)
+  return "image/jpeg";
+}
+
 export async function runImagePipeline(
-  annotatedPngBytes: Buffer,
+  annotatedBytes: Buffer,
   fusedPrompt: string,
 ): Promise<Buffer> {
   const ai = getGemini();
   const model = getImageModel();
+  const mimeType = sniffImageMimeType(annotatedBytes);
 
   const response = await ai.models.generateContent({
     model,
@@ -23,8 +33,8 @@ export async function runImagePipeline(
           { text: fusedPrompt },
           {
             inlineData: {
-              mimeType: "image/png",
-              data: annotatedPngBytes.toString("base64"),
+              mimeType,
+              data: annotatedBytes.toString("base64"),
             },
           },
         ],

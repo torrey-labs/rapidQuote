@@ -33,14 +33,14 @@ export async function POST(request: Request) {
 
   const supabase = getSupabaseServer();
   const genId = randomUUID();
-  const storagePath = `${sessionId}/${genId}.png`;
+  const storagePath = `${sessionId}/${genId}.jpg`;
 
   const annotatedBuffer = Buffer.from(await annotatedImage.arrayBuffer());
 
   const { error: uploadErr } = await supabase.storage
     .from("annotated")
     .upload(storagePath, annotatedBuffer, {
-      contentType: "image/png",
+      contentType: "image/jpeg",
       upsert: false,
     });
 
