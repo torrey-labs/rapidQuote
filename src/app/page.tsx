@@ -10,14 +10,14 @@ export default async function Home() {
     label: string | null;
     original_url: string;
     created_at: string;
-    generations: { id: string; status: string; result_url: string | null }[];
+    generations: { id: string; status: string; result_url: string | null; created_at: string }[];
   }[] = [];
 
   try {
     const supabase = getSupabaseServer();
     const { data } = await supabase
       .from("sessions")
-      .select("id, label, original_url, created_at, generations(id, status, result_url)")
+      .select("id, label, original_url, created_at, generations(id, status, result_url, created_at)")
       .order("created_at", { ascending: false })
       .limit(6);
     recentSessions = data ?? [];
@@ -29,7 +29,7 @@ export default async function Home() {
     .map((s) => {
       const completedGens = (s.generations ?? [])
         .filter((g: { status: string }) => g.status === "complete")
-        .sort((a: { id: string }, b: { id: string }) => b.id.localeCompare(a.id));
+        .sort((a: { created_at: string }, b: { created_at: string }) => b.created_at.localeCompare(a.created_at));
       const latest = completedGens[0];
       return latest ? { ...s, genId: latest.id, resultUrl: latest.result_url } : null;
     })
