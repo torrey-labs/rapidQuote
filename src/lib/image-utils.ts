@@ -52,6 +52,7 @@ export type StickerDraw = {
   cy: number;
   w: number;
   h: number;
+  outline?: boolean;
 };
 
 export async function flattenCanvasToBlob(
@@ -105,6 +106,30 @@ export async function flattenCanvasToBlob(
     const dh = s.h * scale;
     const dx = s.cx * scale - dw / 2;
     const dy = s.cy * scale - dh / 2;
+
+    if (s.outline) {
+      const outlinePx = Math.max(3, Math.round(Math.min(dw, dh) * 0.08));
+      const silhouette = document.createElement("canvas");
+      silhouette.width = Math.ceil(dw);
+      silhouette.height = Math.ceil(dh);
+      const sctx = silhouette.getContext("2d")!;
+      sctx.drawImage(s.image, 0, 0, dw, dh);
+      sctx.globalCompositeOperation = "source-in";
+      sctx.fillStyle = "#ffffff";
+      sctx.fillRect(0, 0, dw, dh);
+      // Stamp the white silhouette around the target in 8 directions for a crisp outline
+      for (let angle = 0; angle < 360; angle += 45) {
+        const rad = (angle * Math.PI) / 180;
+        ctx.drawImage(
+          silhouette,
+          dx + Math.cos(rad) * outlinePx,
+          dy + Math.sin(rad) * outlinePx,
+          dw,
+          dh,
+        );
+      }
+    }
+
     ctx.drawImage(s.image, dx, dy, dw, dh);
   }
 

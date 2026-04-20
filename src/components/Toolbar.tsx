@@ -13,13 +13,24 @@ type ToolDef = {
 };
 
 const TOOLS: ToolDef[] = [
-  { kind: "deck", label: "Deck", desc: "LED strip along deck edges + railings", color: "#3b82f6", icon: "〰️" },
   { kind: "permanent", label: "Permanent", desc: "Roofline / eaves architectural lighting", color: "#f59e0b", icon: "⌇" },
   { kind: "downlight", label: "Downlight", desc: "Eave/ceiling downlight fixture", color: "#cbd5e1", iconSrc: "/stickers/downlight.png" },
   { kind: "uplight", label: "Uplight", desc: "Ground uplight on tree/pillar", color: "#cbd5e1", iconSrc: "/stickers/uplight.png" },
   { kind: "pathlight", label: "Pathlight", desc: "Walkway path fixture", color: "#cbd5e1", iconSrc: "/stickers/pathlight.png" },
   { kind: "eraser", label: "Eraser", desc: "Remove strokes", color: "#9ca3af", iconSrc: "/icons/eraser.png" },
 ];
+
+function getSizeRange(kind: ToolKind): { min: number; max: number } {
+  switch (kind) {
+    case "permanent":
+    case "downlight":
+    case "uplight":
+    case "pathlight":
+      return { min: 1, max: 10 };
+    default:
+      return { min: 1, max: 10 };
+  }
+}
 
 type ToolbarProps = {
   activeTool: ToolKind;
@@ -62,20 +73,21 @@ export default function Toolbar({
 }: ToolbarProps) {
   const sticker = isStickerKind(activeTool);
   const sizeLabel = sticker ? "Sticker size" : "Line width";
-  const sizeMin = sticker ? 5 : 2;
-  const sizeMax = sticker ? 25 : 20;
+  const { min: sizeMin, max: sizeMax } = getSizeRange(activeTool);
 
   if (collapsed) {
     return (
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-charcoal/90 text-cream/70 shadow-2xl backdrop-blur-md transition hover:text-cream"
-          title="Show toolbar"
-        >
-          ↑
-        </button>
+        <Tooltip label="Show toolbar">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-charcoal/90 text-cream/70 shadow-2xl backdrop-blur-md transition hover:text-cream"
+            aria-label="Show toolbar"
+          >
+            ↑
+          </button>
+        </Tooltip>
       </div>
     );
   }
@@ -120,14 +132,16 @@ export default function Toolbar({
 
       {/* Main toolbar */}
       <div className="flex items-center gap-1 rounded-2xl bg-charcoal/90 px-2 py-2 shadow-2xl backdrop-blur-md">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition hover:text-cream/80"
-          title="New photo"
-        >
-          ←
-        </button>
+        <Tooltip label="New photo">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition hover:text-cream/80"
+            aria-label="New photo"
+          >
+            ←
+          </button>
+        </Tooltip>
 
         <div className="mx-0.5 h-6 w-px bg-cream/20" />
 
@@ -135,81 +149,88 @@ export default function Toolbar({
           const isSticker = isStickerKind(t.kind);
           const isEraser = t.kind === "eraser";
           return (
-            <button
-              key={t.kind}
-              type="button"
-              onClick={() => onToolChange(t.kind)}
-              className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
-                activeTool === t.kind
-                  ? "ring-2 ring-offset-1 ring-offset-charcoal"
-                  : "opacity-60 hover:opacity-90"
-              }`}
-              style={
-                activeTool === t.kind
-                  ? ({ backgroundColor: t.color + "33", "--tw-ring-color": t.color } as React.CSSProperties)
-                  : undefined
-              }
-              title={t.label}
-            >
-              {t.iconSrc ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={t.iconSrc}
-                  alt={t.label}
-                  className="h-6 w-6 object-contain"
-                  style={
-                    isEraser
-                      ? { filter: "invert(1)", opacity: activeTool === t.kind ? 1 : 0.7 }
-                      : { opacity: activeTool === t.kind ? 1 : 0.75 }
-                  }
-                />
-              ) : (
-                <span className={`${isSticker ? "text-xs" : "text-xl"} leading-none`} style={{ color: t.color }}>
-                  {t.icon}
-                </span>
-              )}
-            </button>
+            <Tooltip key={t.kind} label={t.label}>
+              <button
+                type="button"
+                onClick={() => onToolChange(t.kind)}
+                className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
+                  activeTool === t.kind
+                    ? "ring-2 ring-offset-1 ring-offset-charcoal"
+                    : "opacity-60 hover:opacity-90"
+                }`}
+                style={
+                  activeTool === t.kind
+                    ? ({ backgroundColor: t.color + "33", "--tw-ring-color": t.color } as React.CSSProperties)
+                    : undefined
+                }
+                aria-label={t.label}
+              >
+                {t.iconSrc ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={t.iconSrc}
+                    alt={t.label}
+                    className="h-6 w-6 object-contain"
+                    style={
+                      isEraser
+                        ? { filter: "invert(1)", opacity: activeTool === t.kind ? 1 : 0.7 }
+                        : { opacity: activeTool === t.kind ? 1 : 0.75 }
+                    }
+                  />
+                ) : (
+                  <span className={`${isSticker ? "text-xs" : "text-xl"} leading-none`} style={{ color: t.color }}>
+                    {t.icon}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
           );
         })}
 
         <div className="mx-0.5 h-6 w-px bg-cream/20" />
 
-        <ActionButton onClick={onUndo} disabled={!canUndo} title="Undo">↩</ActionButton>
-        <ActionButton onClick={onRedo} disabled={!canRedo} title="Redo">↪</ActionButton>
-        <ActionButton onClick={onClear} disabled={!hasStrokes} title="Clear all">⌫</ActionButton>
+        <ActionButton onClick={onUndo} disabled={!canUndo} label="Undo">↩</ActionButton>
+        <ActionButton onClick={onRedo} disabled={!canRedo} label="Redo">↪</ActionButton>
+        <ActionButton onClick={onClear} disabled={!hasStrokes} label="Clear all">⌫</ActionButton>
 
         <div className="mx-0.5 h-6 w-px bg-cream/20" />
 
-        <button
-          type="button"
-          onClick={onToggleNotes}
-          className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
-            notesOpen ? "bg-accent/20 text-accent" : "text-cream/50 hover:text-cream/80"
-          }`}
-          title="Notes"
-        >
-          ✎
-        </button>
+        <Tooltip label="Notes">
+          <button
+            type="button"
+            onClick={onToggleNotes}
+            className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
+              notesOpen ? "bg-accent/20 text-accent" : "text-cream/50 hover:text-cream/80"
+            }`}
+            aria-label="Notes"
+          >
+            ✎
+          </button>
+        </Tooltip>
 
-        <button
-          type="button"
-          onClick={onToggleLegend}
-          className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
-            legendOpen ? "bg-accent/20 text-accent" : "text-cream/50 hover:text-cream/80"
-          }`}
-          title="Tool guide"
-        >
-          ?
-        </button>
+        <Tooltip label="Tool guide">
+          <button
+            type="button"
+            onClick={onToggleLegend}
+            className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg transition ${
+              legendOpen ? "bg-accent/20 text-accent" : "text-cream/50 hover:text-cream/80"
+            }`}
+            aria-label="Tool guide"
+          >
+            ?
+          </button>
+        </Tooltip>
 
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition hover:text-cream/80"
-          title="Collapse toolbar"
-        >
-          ↓
-        </button>
+        <Tooltip label="Collapse toolbar">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition hover:text-cream/80"
+            aria-label="Collapse toolbar"
+          >
+            ↓
+          </button>
+        </Tooltip>
       </div>
     </div>
   );
@@ -219,22 +240,38 @@ function ActionButton({
   children,
   onClick,
   disabled,
-  title,
+  label,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled: boolean;
-  title: string;
+  label: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition enabled:hover:text-cream/80 disabled:opacity-30"
-    >
+    <Tooltip label={label}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        className="flex h-12 w-12 items-center justify-center rounded-xl text-lg text-cream/50 transition enabled:hover:text-cream/80 disabled:opacity-30"
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="group relative">
       {children}
-    </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-charcoal/95 px-2 py-1 text-xs text-cream opacity-0 shadow-lg ring-1 ring-cream/10 transition-opacity duration-150 group-hover:opacity-100"
+      >
+        {label}
+      </span>
+    </div>
   );
 }

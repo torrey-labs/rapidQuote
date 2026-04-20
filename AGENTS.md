@@ -134,11 +134,10 @@ The installer picks **labeled** tools from a toolbar. Lines encode lighting *sty
 
 | Tool | Kind | Color / asset | Meaning in prompt fusion |
 |---|---|---|---|
-| Deck | Line, 2–20px | `#3b82f6` (blue) | LED strip along deck edges + railings |
-| Permanent | Line, 2–20px | `#f59e0b` (amber) | Permanent architectural roofline / eave lighting |
-| Downlight | Sticker, 5–25% image width | `/stickers/downlight.png` | Eave/ceiling downlight fixture at that spot |
-| Uplight | Sticker, 5–25% image width | `/stickers/uplight.png` | Ground uplight on tree/pillar at that spot |
-| Pathlight | Sticker, 5–25% image width | `/stickers/pathlight.png` | Walkway-height path fixture at that spot |
+| Permanent | Line, 1–10px | `#f59e0b` (amber) | Permanent architectural roofline / eave lighting |
+| Downlight | Sticker, 1–10% image width | `/stickers/downlight.png` | Eave/ceiling downlight fixture at that spot |
+| Uplight | Sticker, 1–10% image width | `/stickers/uplight.png` | Ground uplight on tree/pillar at that spot |
+| Pathlight | Sticker, 1–10% image width | `/stickers/pathlight.png` | Walkway-height path fixture at that spot |
 | Eraser | Radius remove | — | (not passed to fusion) |
 
 **Adding or changing tools requires updating ALL of:**

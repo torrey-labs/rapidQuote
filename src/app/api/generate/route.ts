@@ -8,15 +8,13 @@ import type { Stroke, StrokeCounts } from "@/lib/types";
 
 function countStrokes(strokes: Stroke[]): StrokeCounts {
   const counts: StrokeCounts = {
-    deck: 0,
     permanent: 0,
     downlight: 0,
     uplight: 0,
     pathlight: 0,
   };
   for (const s of strokes) {
-    if (s.tool === "deck") counts.deck++;
-    else if (s.tool === "permanent") counts.permanent++;
+    if (s.tool === "permanent") counts.permanent++;
     else if (s.tool === "downlight") counts.downlight++;
     else if (s.tool === "uplight") counts.uplight++;
     else if (s.tool === "pathlight") counts.pathlight++;
@@ -97,7 +95,7 @@ export async function POST(request: Request) {
       // 1. Build the static Gemini prompt (no LLM fusion)
       const counts = countStrokes(strokes);
       const finalPrompt = buildFinalPrompt(counts, notes);
-      const userMessage = `deck:${counts.deck} permanent:${counts.permanent} uplight:${counts.uplight} downlight:${counts.downlight} pathlight:${counts.pathlight}${notes.trim() ? ` notes:"${notes.trim()}"` : ""}`;
+      const userMessage = `permanent:${counts.permanent} uplight:${counts.uplight} downlight:${counts.downlight} pathlight:${counts.pathlight}${notes.trim() ? ` notes:"${notes.trim()}"` : ""}`;
       const imageModel = getImageModel();
 
       await supabase

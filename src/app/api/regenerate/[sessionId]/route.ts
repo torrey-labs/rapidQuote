@@ -7,15 +7,13 @@ import type { Stroke, StrokeCounts } from "@/lib/types";
 
 function countStrokes(strokes: Stroke[]): StrokeCounts {
   const counts: StrokeCounts = {
-    deck: 0,
     permanent: 0,
     downlight: 0,
     uplight: 0,
     pathlight: 0,
   };
   for (const s of strokes) {
-    if (s.tool === "deck") counts.deck++;
-    else if (s.tool === "permanent") counts.permanent++;
+    if (s.tool === "permanent") counts.permanent++;
     else if (s.tool === "downlight") counts.downlight++;
     else if (s.tool === "uplight") counts.uplight++;
     else if (s.tool === "pathlight") counts.pathlight++;

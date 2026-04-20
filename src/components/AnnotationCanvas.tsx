@@ -19,13 +19,19 @@ import { STICKER_KINDS, isStickerKind } from "@/lib/types";
 import Toolbar from "./Toolbar";
 import NotesPanel from "./NotesPanel";
 
-const TOOL_COLORS: Record<"deck" | "permanent", string> = {
-  deck: "#3b82f6",
+const TOOL_COLORS: Record<"permanent", string> = {
   permanent: "#f59e0b",
 };
 
-const DEFAULT_STROKE_SIZE = 8;
-const DEFAULT_STICKER_SIZE = 10; // percent of image width
+const DEFAULT_STROKE_SIZE = 5;
+
+type SizeConfig = { min: number; max: number; def: number };
+const TOOL_SIZE: Record<Exclude<ToolKind, "eraser">, SizeConfig> = {
+  permanent: { min: 1, max: 10, def: 5 },
+  downlight: { min: 1, max: 10, def: 5 },
+  uplight: { min: 1, max: 10, def: 5 },
+  pathlight: { min: 1, max: 10, def: 5 },
+};
 
 type Props = {
   sessionId: string;
@@ -46,7 +52,6 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
   // Filter out any unknown-tool strokes from old sessions (back-compat drop)
   const sanitizedInitial = (initialStrokes ?? []).filter(
     (s) =>
-      s.tool === "deck" ||
       s.tool === "permanent" ||
       s.tool === "downlight" ||
       s.tool === "uplight" ||
@@ -55,7 +60,7 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
 
   const [strokes, setStrokes] = useState<Stroke[]>(sanitizedInitial);
   const [redoHistory, setRedoHistory] = useState<Stroke[][]>([]);
-  const [activeTool, setActiveTool] = useState<ToolKind>("deck");
+  const [activeTool, setActiveTool] = useState<ToolKind>("permanent");
   const [strokeSize, setStrokeSize] = useState(DEFAULT_STROKE_SIZE);
   const [currentPoints, setCurrentPoints] = useState<[number, number][]>([]);
   const isDrawing = useRef(false);
@@ -98,13 +103,11 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
     };
   }, []);
 
-  // When switching into a sticker tool, adopt the sticker default size
+  // When switching tools, adopt that tool's default size if current is out of range
   useEffect(() => {
-    if (isStickerKind(activeTool)) {
-      setStrokeSize((prev) => (prev < 5 || prev > 25 ? DEFAULT_STICKER_SIZE : prev));
-    } else if (activeTool === "deck" || activeTool === "permanent") {
-      setStrokeSize((prev) => (prev < 2 || prev > 20 ? DEFAULT_STROKE_SIZE : prev));
-    }
+    if (activeTool === "eraser") return;
+    const cfg = TOOL_SIZE[activeTool];
+    setStrokeSize((prev) => (prev < cfg.min || prev > cfg.max ? cfg.def : prev));
   }, [activeTool]);
 
   // Compute the actual rendered position/size of the image within its container
@@ -272,7 +275,7 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
 
     if (activeToolRef.current === "eraser") return;
     const tool = activeToolRef.current;
-    if (tool !== "deck" && tool !== "permanent") return;
+    if (tool !== "permanent") return;
 
     setCurrentPoints((pts) => {
       if (pts.length < 2) return [];
@@ -316,13 +319,14 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
         width={width}
         height={height}
         preserveAspectRatio="xMidYMid meet"
+        filter="url(#sticker-white-outline)"
       />
     );
   }
 
   function renderCurrentStroke() {
     if (currentPoints.length < 2) return null;
-    if (activeTool !== "deck" && activeTool !== "permanent") return null;
+    if (activeTool !== "permanent") return null;
     const px = currentPoints.map(([rx, ry]) => [rx * imgNatural.w, ry * imgNatural.h]);
     const outline = getStroke(px, {
       size: strokeSize,
@@ -362,6 +366,7 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
           cy: sm.position[1] * imgNatural.h,
           w,
           h,
+          outline: true,
         });
       }
 
@@ -460,6 +465,17 @@ export default function AnnotationCanvas({ sessionId, originalUrl, initialStroke
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
           >
+            <defs>
+              <filter id="sticker-white-outline" x="-20%" y="-20%" width="140%" height="140%">
+                <feMorphology in="SourceAlpha" operator="dilate" radius="2.5" result="dilated" />
+                <feFlood floodColor="#ffffff" result="white" />
+                <feComposite in="white" in2="dilated" operator="in" result="outline" />
+                <feMerge>
+                  <feMergeNode in="outline" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             {strokes.map((s) =>
               isStickerKind(s.tool)
                 ? renderStickerMark(s as StickerMark)

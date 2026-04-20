@@ -1,14 +1,13 @@
 export type StickerKind = "downlight" | "uplight" | "pathlight";
 
 export type ToolKind =
-  | "deck"
   | "permanent"
   | StickerKind
   | "eraser";
 
 export type LineStroke = {
   id: string;
-  tool: "deck" | "permanent";
+  tool: "permanent";
   color: string;
   width: number;
   points: [number, number][];
@@ -24,7 +23,6 @@ export type StickerMark = {
 export type Stroke = LineStroke | StickerMark;
 
 export type StrokeCounts = {
-  deck: number;
   permanent: number;
   downlight: number;
   uplight: number;
@@ -32,7 +30,6 @@ export type StrokeCounts = {
 };
 
 export const emptyStrokeCounts = (): StrokeCounts => ({
-  deck: 0,
   permanent: 0,
   downlight: 0,
   uplight: 0,
