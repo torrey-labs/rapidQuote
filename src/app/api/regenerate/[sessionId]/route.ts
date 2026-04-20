@@ -1,5 +1,5 @@
 import { getSupabaseServer } from "@/lib/supabase";
-import { fusePrompt } from "@/lib/prompt-fusion";
+import { buildFinalPrompt } from "@/lib/prompts/master-prompt";
 import { runImagePipeline, GeminiRefusalError } from "@/lib/image-pipeline";
 import { randomUUID } from "crypto";
 import { after } from "next/server";
@@ -93,11 +93,15 @@ export async function POST(
         .eq("id", genId);
 
       const counts = countStrokes(strokes);
-      const { finalPrompt, reasoning } = await fusePrompt(counts, "");
+      const finalPrompt = buildFinalPrompt(counts, "");
 
       await supabase
         .from("generations")
-        .update({ fusion_log: `${reasoning}\n\n---\n\n${finalPrompt}` })
+        .update({
+          master_prompt: finalPrompt,
+          fused_prompt: finalPrompt,
+          fusion_log: finalPrompt,
+        })
         .eq("id", genId);
 
       const resultBuffer = await runImagePipeline(annotatedBuffer, finalPrompt);

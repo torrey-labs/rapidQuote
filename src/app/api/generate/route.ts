@@ -1,5 +1,5 @@
 import { getSupabaseServer } from "@/lib/supabase";
-import { fusePrompt } from "@/lib/prompt-fusion";
+import { buildFinalPrompt } from "@/lib/prompts/master-prompt";
 import { runImagePipeline, GeminiRefusalError } from "@/lib/image-pipeline";
 import { getImageModel } from "@/lib/gemini";
 import { randomUUID } from "crypto";
@@ -94,22 +94,21 @@ export async function POST(request: Request) {
         .update({ status: "processing" })
         .eq("id", genId);
 
-      // 1. Prompt fusion via Claude Haiku
+      // 1. Build the static Gemini prompt (no LLM fusion)
       const counts = countStrokes(strokes);
-      const { finalPrompt, reasoning, masterPrompt, userMessage } =
-        await fusePrompt(counts, notes);
-
+      const finalPrompt = buildFinalPrompt(counts, notes);
+      const userMessage = `deck:${counts.deck} permanent:${counts.permanent} uplight:${counts.uplight} downlight:${counts.downlight} pathlight:${counts.pathlight}${notes.trim() ? ` notes:"${notes.trim()}"` : ""}`;
       const imageModel = getImageModel();
 
       await supabase
         .from("generations")
         .update({
-          master_prompt: masterPrompt,
+          master_prompt: finalPrompt,
           user_message: userMessage,
           fused_prompt: finalPrompt,
-          fusion_reasoning: reasoning,
+          fusion_reasoning: null,
           image_model: imageModel,
-          fusion_log: `${reasoning}\n\n---\n\n${finalPrompt}`,
+          fusion_log: finalPrompt,
         })
         .eq("id", genId);
 

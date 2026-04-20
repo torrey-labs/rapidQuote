@@ -26,8 +26,7 @@ export async function GET() {
     }
   }
 
-  const ok =
-    supabase === "ok" && env.anthropic && env.gemini;
+  const ok = supabase === "ok" && env.gemini;
 
   return Response.json(
     {

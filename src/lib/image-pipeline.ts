@@ -1,3 +1,5 @@
+import { readFile } from "fs/promises";
+import path from "path";
 import { getGemini, getImageModel } from "./gemini";
 
 export class GeminiRefusalError extends Error {
@@ -7,22 +9,44 @@ export class GeminiRefusalError extends Error {
   }
 }
 
+// Neutral alias so routes can import either name.
+export { GeminiRefusalError as ImageGenRefusalError };
+
 function sniffImageMimeType(buf: Buffer): "image/jpeg" | "image/png" {
-  // PNG: 89 50 4E 47
   if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
     return "image/png";
   }
-  // Default to JPEG (FF D8 FF)
   return "image/jpeg";
+}
+
+type StickerRefs = {
+  uplight: Buffer;
+  downlight: Buffer;
+  pathlight: Buffer;
+};
+
+let cachedStickers: StickerRefs | null = null;
+
+async function loadStickerRefs(): Promise<StickerRefs> {
+  if (cachedStickers) return cachedStickers;
+  const base = path.join(process.cwd(), "public", "stickers");
+  const [uplight, downlight, pathlight] = await Promise.all([
+    readFile(path.join(base, "uplight.png")),
+    readFile(path.join(base, "downlight.png")),
+    readFile(path.join(base, "pathlight.png")),
+  ]);
+  cachedStickers = { uplight, downlight, pathlight };
+  return cachedStickers;
 }
 
 export async function runImagePipeline(
   annotatedBytes: Buffer,
-  fusedPrompt: string,
+  finalPrompt: string,
 ): Promise<Buffer> {
   const ai = getGemini();
   const model = getImageModel();
-  const mimeType = sniffImageMimeType(annotatedBytes);
+  const annotatedMime = sniffImageMimeType(annotatedBytes);
+  const refs = await loadStickerRefs();
 
   const response = await ai.models.generateContent({
     model,
@@ -30,11 +54,29 @@ export async function runImagePipeline(
       {
         role: "user",
         parts: [
-          { text: fusedPrompt },
+          { text: finalPrompt },
           {
             inlineData: {
-              mimeType,
+              mimeType: annotatedMime,
               data: annotatedBytes.toString("base64"),
+            },
+          },
+          {
+            inlineData: {
+              mimeType: "image/png",
+              data: refs.uplight.toString("base64"),
+            },
+          },
+          {
+            inlineData: {
+              mimeType: "image/png",
+              data: refs.downlight.toString("base64"),
+            },
+          },
+          {
+            inlineData: {
+              mimeType: "image/png",
+              data: refs.pathlight.toString("base64"),
             },
           },
         ],
