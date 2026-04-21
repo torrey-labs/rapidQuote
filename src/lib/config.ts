@@ -23,9 +23,8 @@ export const config = {
   },
   fal: {
     apiKey: () => required("FAL_KEY"),
-    model: () => required("FAL_IMAGE_MODEL"),
-    configured: () =>
-      Boolean(process.env.FAL_KEY) && Boolean(process.env.FAL_IMAGE_MODEL),
+    model: () => process.env.FAL_IMAGE_MODEL ?? "fal-ai/flux-pro/kontext",
+    configured: () => Boolean(process.env.FAL_KEY),
   },
   check: () => ({
     supabase:
@@ -39,8 +38,7 @@ export const config = {
       Boolean(process.env.GEMINI_API_KEY) &&
       Boolean(process.env.GEMINI_IMAGE_MODEL),
     geminiModel: process.env.GEMINI_IMAGE_MODEL ?? null,
-    fal:
-      Boolean(process.env.FAL_KEY) && Boolean(process.env.FAL_IMAGE_MODEL),
-    falModel: process.env.FAL_IMAGE_MODEL ?? null,
+    fal: Boolean(process.env.FAL_KEY),
+    falModel: process.env.FAL_IMAGE_MODEL ?? "fal-ai/flux-pro/kontext",
   }),
 };
