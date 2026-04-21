@@ -134,7 +134,7 @@ The installer picks **labeled** tools from a toolbar. Lines encode lighting *sty
 
 | Tool | Kind | Color / asset | Meaning in prompt fusion |
 |---|---|---|---|
-| Permanent | Line, 1–10px | `#f59e0b` (amber) | Permanent architectural roofline / eave lighting |
+| Permanent | Line, 1–10px | `#a855f7` (bright purple) | Permanent architectural roofline / eave lighting |
 | Downlight | Sticker, 1–10% image width | `/stickers/downlight.png` | Eave/ceiling downlight fixture at that spot |
 | Uplight | Sticker, 1–10% image width | `/stickers/uplight.png` | Ground uplight on tree/pillar at that spot |
 | Pathlight | Sticker, 1–10% image width | `/stickers/pathlight.png` | Walkway-height path fixture at that spot |

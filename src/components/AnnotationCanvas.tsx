@@ -20,7 +20,7 @@ import Toolbar from "./Toolbar";
 import NotesPanel from "./NotesPanel";
 
 const TOOL_COLORS: Record<"permanent", string> = {
-  permanent: "#f59e0b",
+  permanent: "#a855f7",
 };
 
 const DEFAULT_STROKE_SIZE = 5;

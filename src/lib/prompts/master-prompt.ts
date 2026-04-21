@@ -26,7 +26,7 @@ FRAMING (non-negotiable)
   • Do not crop. Do not add letterbox bars. Do not rotate.
 
 HOW TO READ IMAGE 1
-  • AMBER LINE (#f59e0b) → PERMANENT architectural lighting. Install recessed warm-white linear lighting along the exact path of the line, following the roofline/fascia/eave/soffit it traces. A clean even wash — no visible bulbs, no string or bistro lights.
+  • PURPLE LINE (#a855f7) → PERMANENT architectural lighting. Install recessed warm-white linear lighting along the exact path of the line, following the roofline/fascia/eave/soffit it traces. A clean even wash — no visible bulbs, no string or bistro lights.
   • UPLIGHT STICKER (fixture = Image 2) → one ground-mounted uplight at the exact sticker position, aimed up at the nearest tree, pillar, or wall.
   • DOWNLIGHT STICKER (fixture = Image 3) → one wall/eave-mounted downlight at the exact sticker position, aimed straight down.
   • PATHLIGHT STICKER (fixture = Image 4) → one path fixture planted in the ground at the exact sticker position.

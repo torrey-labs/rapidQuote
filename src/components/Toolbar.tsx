@@ -13,7 +13,7 @@ type ToolDef = {
 };
 
 const TOOLS: ToolDef[] = [
-  { kind: "permanent", label: "Permanent", desc: "Roofline / eaves architectural lighting", color: "#f59e0b", icon: "⌇" },
+  { kind: "permanent", label: "Permanent", desc: "Roofline / eaves architectural lighting", color: "#a855f7", icon: "⌇" },
   { kind: "downlight", label: "Downlight", desc: "Eave/ceiling downlight fixture", color: "#cbd5e1", iconSrc: "/stickers/downlight.png" },
   { kind: "uplight", label: "Uplight", desc: "Ground uplight on tree/pillar", color: "#cbd5e1", iconSrc: "/stickers/uplight.png" },
   { kind: "pathlight", label: "Pathlight", desc: "Walkway path fixture", color: "#cbd5e1", iconSrc: "/stickers/pathlight.png" },
